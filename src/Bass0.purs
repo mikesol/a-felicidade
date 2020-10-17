@@ -60,7 +60,7 @@ midi2cps :: Number -> Number
 midi2cps n = (440.0 * (2.0 `pow` ((n - 69.0) / 12.0)))
 
 scene :: Number -> Behavior (AudioUnit D1)
-scene t = pure (speaker' (gainT' (gn t (pwf 0.2)) $ sinOsc 90.0))
+scene t = pure (speaker' (gainT' (gn t (pwf 0.2)) $ sinOsc (midi2cps 25.0)))
 
 main :: Klank
 main = klank { run = runInBrowser scene }

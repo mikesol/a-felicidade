@@ -35,7 +35,7 @@ scene time =
                     Tuple
                       ( g'audioWorkletProcessor
                           "klank-micro-delay"
-                          (O.singleton "len" 50.0)
+                          (O.singleton "len" 30.0)
                       )
                       (SProxy :: SProxy "combine")
                 }
