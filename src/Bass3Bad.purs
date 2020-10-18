@@ -1,5 +1,7 @@
--- more overtones than bass 0
-module Klank.Bass1 where
+---- adds a pitch bend
+---- processing in browser pretty slow on Windows
+---- maybe not possible in current form
+module Klank.Bass3Bad where
 
 import Prelude
 import Data.Array (head, last, span)
@@ -9,7 +11,7 @@ import Data.NonEmpty ((:|))
 import Data.Tuple (Tuple(..), fst, snd)
 import Data.Typelevel.Num (D1)
 import FRP.Behavior (Behavior)
-import FRP.Behavior.Audio (AudioParameter(..), AudioUnit, gain, gainT_', runInBrowser, sinOsc_, speaker')
+import FRP.Behavior.Audio (AudioParameter(..), AudioUnit, gain, gainT_', runInBrowser, sinOscT_, sinOsc_, speaker)
 import Math (pow)
 import Type.Klank.Dev (Klank, klank)
 
@@ -20,9 +22,14 @@ pwf s =
   [ Tuple 0.0 0.0 ] <> (if s <= 0.0 then [] else [ Tuple s 0.0 ])
     <> [ Tuple (s + 0.024) 0.94
       , Tuple (s + 0.15) 0.5
-      , Tuple (s + 0.46) 0.1
-      , Tuple (s + 0.76) 0.0
+      , Tuple (s + 0.66) 0.25
+      , Tuple (s + 0.86) 0.0
       ]
+
+pwfBend :: Number -> Number -> Number -> Array (Tuple Number Number)
+pwfBend s pitch bend =
+  [ Tuple 0.0 pitch ] <> (if s <= 0.0 then [] else [ Tuple s pitch ])
+    <> [ Tuple (s + 0.4) pitch, Tuple (s + 0.7) (pitch + bend) ]
 
 pwfSub :: Number -> Array (Tuple Number Number)
 pwfSub s =
@@ -79,22 +86,34 @@ gn s p =
 midi2cps :: Number -> Number
 midi2cps n = (440.0 * (2.0 `pow` ((n - 69.0) / 12.0)))
 
-thunk :: Number → Number → String → AudioUnit D1
-thunk t gg tag =
-  ( gain gg
-      ( (gainT_' ("g0" <> tag) (gn t (pwf 1.0)) $ sinOsc_ ("s0" <> tag) (midi2cps 47.0))
-          :| (gainT_' ("g1" <> tag) (gn t (pwfSub 1.0)) $ sinOsc_ ("s1" <> tag) (midi2cps 35.0))
-          : (gainT_' ("g2" <> tag) (gn t (pwfH1 1.0)) $ sinOsc_ ("s2" <> tag) (midi2cps 59.0))
-          : (gainT_' ("g3" <> tag) (gn t (pwfH2 1.0)) $ sinOsc_ ("s3" <> tag) (midi2cps 71.0))
-          : Nil
-      )
+thunk :: Number → Number → Number -> Number -> Number -> String → (List (AudioUnit D1))
+thunk t gg pitch os ud tag =
+  ( if t - os > (-0.1) && t - os < 1.6 then
+      pure
+        $ gain gg
+            ( (gainT_' ("g0" <> tag) (gn t (pwf os)) $ sinOscT_ ("s0" <> tag) (midi2cps <$> (gn t (pwfBend os (pitch + 12.0) ud))))
+                :| (gainT_' ("g1" <> tag) (gn t (pwfSub os)) $ sinOsc_ ("s1" <> tag) (midi2cps pitch))
+                : (gainT_' ("g2" <> tag) (gn t (pwfH1 os)) $ sinOsc_ ("s2" <> tag) (midi2cps (pitch + 24.0)))
+                : (gainT_' ("g3" <> tag) (gn t (pwfH2 os)) $ sinOsc_ ("s3" <> tag) (midi2cps (pitch + 36.0)))
+                : Nil
+            )
+    else
+      Nil
   )
+
+tempo = 60.0 / 96.0 :: Number
 
 scene :: Number -> Behavior (AudioUnit D1)
 scene t =
   pure
-    ( speaker'
-        $ thunk t 0.5 "a"
+    ( speaker
+        $ zero
+        :| ( thunk t 0.3 35.0 1.0 1.5 "a"
+              -- <> thunk t 0.3 30.0 (1.0 + tempo) (-0.6) "b"
+              -- <> thunk t 0.3 35.0 (1.0 + (tempo * 2.0)) 1.5 "a"
+              -- <> thunk t 0.3 30.0 (1.0 + (tempo * 3.0)) (-0.6) "a"
+              -- <> Nil
+          )
     )
 
 main :: Klank

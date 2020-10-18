@@ -1,24 +1,14 @@
-module Klank.Bass where
+module Klank.Bass0 where
 
 import Prelude
-import Control.Promise (toAffE)
-import Data.Array (foldl, head, last, length, mapWithIndex, range, span, take, zipWith)
-import Data.Int (toNumber)
-import Data.List (List(..))
-import Data.List as L
+import Data.Array (head, last, span)
 import Data.Maybe (fromMaybe)
-import Data.NonEmpty ((:|))
-import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Typelevel.Num (D1, D2)
-import Effect (Effect)
-import Effect.Aff (Error, ParAff, parallel, sequential)
-import Effect.Random (random)
+import Data.Typelevel.Num (D1)
 import FRP.Behavior (Behavior)
-import FRP.Behavior.Audio (AudioContext, AudioParameter(..), AudioUnit, BrowserAudioBuffer, decodeAudioDataFromUri, gain', gainT', gainT_', playBufT_, runInBrowser, sinOsc, speaker, speaker')
-import Foreign.Object as O
+import FRP.Behavior.Audio (AudioParameter(..), AudioUnit, gainT', runInBrowser, sinOsc, speaker')
 import Math (pow)
-import Type.Klank.Dev (Klank, affable, klank)
+import Type.Klank.Dev (Klank, klank)
 
 kr = 20.0 / 1000.0 :: Number
 

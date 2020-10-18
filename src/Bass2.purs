@@ -1,5 +1,5 @@
--- more overtones than bass 0
-module Klank.Bass1 where
+---- slightly longer tail than bass1, otherwise not much different
+module Klank.Bass2 where
 
 import Prelude
 import Data.Array (head, last, span)
@@ -20,8 +20,8 @@ pwf s =
   [ Tuple 0.0 0.0 ] <> (if s <= 0.0 then [] else [ Tuple s 0.0 ])
     <> [ Tuple (s + 0.024) 0.94
       , Tuple (s + 0.15) 0.5
-      , Tuple (s + 0.46) 0.1
-      , Tuple (s + 0.76) 0.0
+      , Tuple (s + 0.66) 0.25
+      , Tuple (s + 0.86) 0.0
       ]
 
 pwfSub :: Number -> Array (Tuple Number Number)
