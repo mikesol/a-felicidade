@@ -1,4 +1,4 @@
-module A.Felicidade.Pluck where
+module A.Felicidade.ManyPluck where
 
 import Prelude
 import Data.Symbol (SProxy(..))
