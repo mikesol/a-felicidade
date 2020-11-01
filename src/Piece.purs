@@ -115,6 +115,12 @@ type AFelicidadeAccumulator
   = { isClicked :: Boolean
     }
 
+type AFelicidadeInteractiveInfo
+  = { isClicked :: Boolean
+    , justClicked :: Boolean
+    , pos :: Maybe { x :: Number, y :: Number }
+    }
+
 scene ::
   Number ->
   Number ->
@@ -127,7 +133,22 @@ scene w h mouse acc time = f <$> pos' <*> isClicked'
   f pos isClicked =
     ( IAudioUnit
         ( speaker'
-            ( gainT_ "masterFader" ((epwf [ Tuple 0.0 1.0, Tuple 1000.0 1.0 ]) time) (zero :| Nil)
+            ( gainT_ "masterFader"
+                ((epwf [ Tuple 0.0 1.0, Tuple 1000.0 1.0 ]) time)
+                ( zero
+                    :| fold
+                        ( ( map
+                              ( \fn ->
+                                  fn time
+                                    { isClicked
+                                    , justClicked
+                                    , pos
+                                    }
+                              )
+                              (eventList)
+                          )
+                        )
+                )
             )
         )
         ( acc
@@ -136,7 +157,7 @@ scene w h mouse acc time = f <$> pos' <*> isClicked'
         )
     )
     where
-    didJustClick = (not acc.isClicked && isClicked)
+    justClicked = (not acc.isClicked && isClicked)
 
   pos' :: Behavior (Maybe { x :: Number, y :: Number })
   pos' =
@@ -154,7 +175,15 @@ scene w h mouse acc time = f <$> pos' <*> isClicked'
 main :: Klank' AFelicidadeAccumulator
 main =
   klank
-    { buffers = makeBuffersKeepingCacheWithPersistentDownloads []
+    { buffers =
+      makeBuffersKeepingCacheWithPersistentDownloads
+        ( map (\s -> Tuple s (fromCloud s))
+            [ "Afoxe/Afoxe.ogg"
+            , "Afoxe/Agogo_2.ogg"
+            , "Capoeira/Pandeiro_1.ogg"
+            , "Frevo/Surdo_2D.ogg"
+            ]
+        )
     , accumulator = \res rej -> res { isClicked: false }
     , run =
       runInBrowser_ do
@@ -165,3 +194,22 @@ main =
         pure (scene (toNumber width) (toNumber height) mouse)
     , exporter = defaultExporter
     }
+
+---------------------------------------------
+------------------------------------
+------------- stuff
+simplPlyr :: String -> Number -> AFelicidadeInteractiveInfo -> List (AudioUnit D2)
+simplPlyr s time info =
+  boundPlayer 20.0 time
+    ( defer \_ ->
+        pure
+          $ (playBuf_ (s) (s) 1.0)
+    )
+
+eventList :: Array (Number -> AFelicidadeInteractiveInfo -> List (AudioUnit D2))
+eventList =
+  [ atT 1.0 $ (simplPlyr "Afoxe/Afoxe.ogg")
+  , atT 1.0 $ (simplPlyr "Afoxe/Agogo_2.ogg")
+  , atT 1.0 $ (simplPlyr "Capoeira/Pandeiro_1.ogg")
+  , atT 1.0 $ (simplPlyr "Frevo/Surdo_2D.ogg")
+  ]
