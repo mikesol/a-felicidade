@@ -141,8 +141,7 @@ thunk :: Number -> Number -> Number -> Number -> String -> AudioUnit D1
 thunk t globalGain os bend tag =
   ( gain globalGain
       ( (gainT_' ("g0" <> tag) (gn t (pwf os)) $ sinOscT_ ("s0" <> tag) (gn t (bend'dub' os bend)))
-          :|
-           --(gainT_' ("g1" <> tag) (gn t (pwfSub os)) $ sinOsc_ ("s1" <> tag) (midi2cps 35.0)) --: (gainT_' ("g2" <> tag) (gn t (pwfH1 os)) $ sinOsc_ ("s2" <> tag) (midi2cps 59.0)) --: (gainT_' ("g3" <> tag) (gn t (pwfH2 os)) $ sinOsc_ ("s3" <> tag) (midi2cps 71.0))
+          :| --(gainT_' ("g1" <> tag) (gn t (pwfSub os)) $ sinOsc_ ("s1" <> tag) (midi2cps 35.0)) --: (gainT_' ("g2" <> tag) (gn t (pwfH1 os)) $ sinOsc_ ("s2" <> tag) (midi2cps 59.0)) --: (gainT_' ("g3" <> tag) (gn t (pwfH2 os)) $ sinOsc_ ("s3" <> tag) (midi2cps 71.0))
             Nil
       )
   )
