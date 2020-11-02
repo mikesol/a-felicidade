@@ -12,11 +12,13 @@ import Data.NonEmpty ((:|))
 import Data.Tuple (Tuple(..), fst, snd)
 import Data.Typelevel.Num (D1)
 import FRP.Behavior (Behavior)
-import FRP.Behavior.Audio (AudioParameter(..), AudioUnit, gain, gainT_', runInBrowser, sinOscT_, sinOsc_, speaker)
+import FRP.Behavior.Audio (AudioParameter(..), AudioUnit, evalPiecewise, gain, gainT_', runInBrowser, sinOscT_, sinOsc_, speaker)
 import Math (pow)
 import Type.Klank.Dev (Klank, defaultEngineInfo, klank)
 
 kr = (toNumber defaultEngineInfo.msBetweenSamples) / 1000.0 :: Number
+
+epwf = evalPiecewise kr
 
 pwf :: Number -> Array (Tuple Number Number)
 pwf s =
@@ -59,31 +61,6 @@ pwfH2 s =
       , Tuple (s + 0.13) 0.0
       ]
 
-split :: ∀ t12 t13. Ord t12 ⇒ t12 → Array (Tuple t12 t13) → { init ∷ Array (Tuple t12 t13), rest ∷ Array (Tuple t12 t13) }
-split s p = span ((s >= _) <<< fst) p
-
-gn :: Number → Array (Tuple Number Number) → AudioParameter Number
-gn s p =
-  let
-    ht = split s p
-
-    left = fromMaybe (Tuple 0.0 0.0) $ last ht.init
-
-    right = fromMaybe (Tuple 101.0 0.0) $ head ht.rest
-  in
-    if (fst right - s) < kr then
-      AudioParameter
-        { param: (snd right)
-        , timeOffset: (fst right - s)
-        }
-    else
-      let
-        m = (snd right - snd left) / (fst right - fst left)
-
-        b = (snd right - (m * fst right))
-      in
-        AudioParameter { param: (m * s + b), timeOffset: 0.0 }
-
 midi2cps :: Number -> Number
 midi2cps n = (440.0 * (2.0 `pow` ((n - 69.0) / 12.0)))
 
@@ -92,10 +69,10 @@ thunk t gg pitch os ud tag =
   ( if t - os > (-0.1) && t - os < 1.6 then
       pure
         $ gain gg
-            ( (gainT_' ("g0" <> tag) (gn t (pwf os)) $ sinOscT_ ("s0" <> tag) (midi2cps <$> (gn t (pwfBend os (pitch + 12.0) ud))))
-                :| (gainT_' ("g1" <> tag) (gn t (pwfSub os)) $ sinOsc_ ("s1" <> tag) (midi2cps pitch))
-                : (gainT_' ("g2" <> tag) (gn t (pwfH1 os)) $ sinOsc_ ("s2" <> tag) (midi2cps (pitch + 24.0)))
-                : (gainT_' ("g3" <> tag) (gn t (pwfH2 os)) $ sinOsc_ ("s3" <> tag) (midi2cps (pitch + 36.0)))
+            ( (gainT_' ("g0" <> tag) (epwf (pwf os) t) $ sinOsc_ ("s0" <> tag) (midi2cps (epwf (pwfBend os (pitch + 12.0) ud) t).param))
+                :| (gainT_' ("g1" <> tag) (epwf (pwfSub os) t) $ sinOsc_ ("s1" <> tag) (midi2cps pitch))
+                : (gainT_' ("g2" <> tag) (epwf (pwfH1 os) t) $ sinOsc_ ("s2" <> tag) (midi2cps (pitch + 24.0)))
+                : (gainT_' ("g3" <> tag) (epwf (pwfH2 os) t) $ sinOsc_ ("s3" <> tag) (midi2cps (pitch + 36.0)))
                 : Nil
             )
     else

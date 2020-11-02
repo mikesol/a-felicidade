@@ -23,7 +23,7 @@ import Effect.Aff (Aff, Milliseconds(..), delay, try)
 import Effect.Class.Console (log)
 import Effect.Exception (Error)
 import FRP.Behavior (Behavior)
-import FRP.Behavior.Audio (AudioContext, AudioParameter(..), AudioUnit, BrowserAudioBuffer, EngineInfo, IAudioUnit(..), bandpassT_, convolver_, decodeAudioDataFromUri, defaultExporter, dynamicsCompressor_, gain, gainT_, gainT_', gain_, gain_', highpassT_, highpass_, pannerMonoT_, pannerMono_, pannerT_, panner_, playBuf, playBufT_, playBufWithOffset_, playBuf_, runInBrowser, runInBrowser_, sinOsc_, speaker, speaker')
+import FRP.Behavior.Audio (AudioContext, AudioParameter(..), AudioUnit, BrowserAudioBuffer, EngineInfo, IAudioUnit(..), bandpassT_, convolver_, decodeAudioDataFromUri, defaultExporter, dynamicsCompressor_, evalPiecewise, gain, gainT_, gainT_', gain_, gain_', highpassT_, highpass_, pannerMonoT_, pannerMono_, pannerT_, panner_, playBuf, playBufT_, playBufWithOffset_, playBuf_, runInBrowser, runInBrowser_, sinOsc_, speaker, speaker')
 import FRP.Behavior.Mouse (buttons, position)
 import FRP.Event.Mouse (Mouse, getMouse)
 import Foreign.Object as O
@@ -83,30 +83,7 @@ aFelicidadeEngineInfo = defaultEngineInfo :: EngineInfo
 
 kr = (toNumber aFelicidadeEngineInfo.msBetweenSamples) / 1000.0 :: Number
 
-epwf :: Array (Tuple Number Number) -> Number -> AudioParameter Number
-epwf p s =
-  let
-    ht = span ((s >= _) <<< fst) p
-
-    left = fromMaybe (Tuple 0.0 0.0) $ last ht.init
-
-    right =
-      fromMaybe
-        (maybe (Tuple 10000.0 0.0) (over _1 (_ + 1.0)) $ last p)
-        $ head ht.rest
-  in
-    if (fst right - s) < kr then
-      AudioParameter
-        { param: (snd right)
-        , timeOffset: (fst right - s)
-        }
-    else
-      let
-        m = (snd right - snd left) / (fst right - fst left)
-
-        b = (snd right - (m * fst right))
-      in
-        AudioParameter { param: (m * s + b), timeOffset: 0.0 }
+epwf = evalPiecewise kr
 
 fromCloud :: String -> String
 fromCloud s = "https://klank-share.s3-eu-west-1.amazonaws.com/a-felicidade/Samples/" <> s

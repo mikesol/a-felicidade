@@ -2,15 +2,18 @@ module Klank.Bass0 where
 
 import Prelude
 import Data.Array (head, last, span)
+import Data.Int (toNumber)
 import Data.Maybe (fromMaybe)
 import Data.Tuple (Tuple(..), fst, snd)
 import Data.Typelevel.Num (D1)
 import FRP.Behavior (Behavior)
-import FRP.Behavior.Audio (AudioParameter(..), AudioUnit, gainT', runInBrowser, sinOsc, speaker')
+import FRP.Behavior.Audio (AudioParameter(..), AudioUnit, evalPiecewise, gainT', runInBrowser, sinOsc, speaker')
 import Math (pow)
-import Type.Klank.Dev (Klank, klank)
+import Type.Klank.Dev (Klank, defaultEngineInfo, klank)
 
-kr = 20.0 / 1000.0 :: Number
+kr = (toNumber defaultEngineInfo.msBetweenSamples) / 1000.0 :: Number
+
+epwf = evalPiecewise kr
 
 pwf :: Number -> Array (Tuple Number Number)
 pwf s =
@@ -21,36 +24,11 @@ pwf s =
       , Tuple (s + 0.76) 0.0
       ]
 
-split :: ∀ t12 t13. Ord t12 ⇒ t12 → Array (Tuple t12 t13) → { init ∷ Array (Tuple t12 t13), rest ∷ Array (Tuple t12 t13) }
-split s p = span ((s >= _) <<< fst) p
-
-gn :: Number → Array (Tuple Number Number) → AudioParameter Number
-gn s p =
-  let
-    ht = split s p
-
-    left = fromMaybe (Tuple 0.0 0.0) $ last ht.init
-
-    right = fromMaybe (Tuple 101.0 0.0) $ head ht.rest
-  in
-    if (fst right - s) < kr then
-      AudioParameter
-        { param: (snd right)
-        , timeOffset: (fst right - s)
-        }
-    else
-      let
-        m = (snd right - snd left) / (fst right - fst left)
-
-        b = (snd right - (m * fst right))
-      in
-        AudioParameter { param: (m * s + b), timeOffset: 0.0 }
-
 midi2cps :: Number -> Number
 midi2cps n = (440.0 * (2.0 `pow` ((n - 69.0) / 12.0)))
 
 scene :: Number -> Behavior (AudioUnit D1)
-scene t = pure (speaker' (gainT' (gn t (pwf 0.2)) $ sinOsc (midi2cps 25.0)))
+scene t = pure (speaker' (gainT' (epwf (pwf 0.2) t) $ sinOsc (midi2cps 25.0)))
 
 main :: Klank
 main = klank { run = runInBrowser scene }
